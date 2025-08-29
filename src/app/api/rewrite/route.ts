@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 
+type ChatCompletion = {
+  choices?: { message?: { content?: string } }[];
+};
+
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json();
+    const body = (await req.json()) as { prompt?: string };
+    const prompt = body?.prompt;
     if (!prompt) return new NextResponse("Missing prompt", { status: 400 });
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -24,11 +29,16 @@ export async function POST(req: Request) {
       }),
     });
 
-    if (!resp.ok) return new NextResponse(await resp.text(), { status: 500 });
-    const data = await resp.json();
-    const out = data.choices?.[0]?.message?.content?.trim?.() || "";
+    if (!resp.ok) {
+      const text = await resp.text();
+      return new NextResponse(text || "Upstream error", { status: 500 });
+    }
+
+    const data = (await resp.json()) as ChatCompletion;
+    const out = data.choices?.[0]?.message?.content?.trim?.() ?? "";
     return new NextResponse(out, { status: 200 });
-  } catch (err: any) {
-    return new NextResponse(err?.message || "Server error", { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Server error";
+    return new NextResponse(message, { status: 500 });
   }
 }

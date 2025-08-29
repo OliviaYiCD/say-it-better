@@ -52,8 +52,9 @@ User text:
       if (!res.ok) throw new Error(await res.text());
       const text = await res.text();
       setOutput(text.trim());
-    } catch (e: any) {
-      setError(e?.message || "Something went wrong.");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg || "Something went wrong.");
     } finally {
       setIsLoading(false);
       controllerRef.current = null;
